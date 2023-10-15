@@ -148,11 +148,50 @@ nhanes_covar =
   drop_na()
 
 nhanes_accel = 
-  read_csv("./data/nhanes_accel.csv", col_types = "ccidc") |>
+  read_csv("./data/nhanes_accel.csv") |>
   janitor::clean_names() |>
   mutate(seqn=as.character(seqn))
 
 merged_data=left_join(nhanes_covar, nhanes_accel, by="seqn")
 ```
 
+```{r}
+merged_data |>
+  group_by(education) |>
+  count(sex)
+```
+```{r}
+merged_data |>
+  ggplot(aes(x = sex, y = age)) + 
+  geom_boxplot() + 
+  facet_grid(~education)
+```
+
+```{r}
+total_activity = merged_data |>
+  select(starts_with("min")) |>
+  rowSums()
+
+merged_data = cbind(merged_data,total_activity)
+```
+
+```{r}
+
+merged_data |>
+  ggplot(aes(x=age, y=total_activity)) + 
+  geom_point() + 
+  facet_grid(sex~education) + 
+  geom_smooth(se = FALSE)
+```
+```{r}
+merged_data |>
+  pivot_longer(min1:min1440,
+               names_to = "minute",
+               values_to = "activity") |>
+  ggplot(aes(x=minute, y=activity)) + 
+  geom_point(aes(color = sex), alpha = .5) + 
+  facet_grid(~education) + 
+  geom_smooth(se = FALSE)
+
+```
 
