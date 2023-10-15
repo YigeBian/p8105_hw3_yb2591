@@ -80,11 +80,11 @@ instacart |>
   knitr::kable(digits = 2)
 ```
 # Problem 2
-```{r}
+```{r problem 2 data cleaning}
 data("brfss_smart2010")
 brfss_smart2010 = as_tibble(brfss_smart2010) |>
   janitor::clean_names() |>
-  rename(location_abbr=locationabbr, location_desc=locationdesc) |>
+  rename(state=locationabbr, location=locationdesc) |>
   filter(topic %in% "Overall Health") |>
   mutate(response_factor = 
            case_match(
@@ -94,15 +94,65 @@ brfss_smart2010 = as_tibble(brfss_smart2010) |>
              "Good"~"3",
              "Fair"~"2",
              "Poor"~"1")) |>
-  arrange(desc(year), location_abbr, location_desc, response_factor) |>
+  arrange(desc(year), state, location, response_factor) |>
   select(-response_factor)
 ```
 
 ```{r}
 brfss_smart2010 |>
-  group_by(response)
+  group_by(year, state) |>
+  summarize(n_distinct=n_distinct(location)) |>
+  filter(year %in% c("2002","2010")) |>
+  filter(n_distinct>7) |> 
+  arrange(year, desc(n_distinct))
+```
+In 2002, MA and NJ were observed at 7 or more locations (8 for both of them). In 2010, FL, NJ, TX, CA, MD, NC, PA, NE, WA, MA, NY, OH were observed at 7 or more locations (41, 19, 16, 12, 12, 12, 10, 10, 10, 9, 9, 8 respectively).
+
+```{r}
+subset_brfss_smart2010 = brfss_smart2010 |>
+  filter(response %in% "Excellent") |>
+  group_by(year, state) |>
+  summarize(average_data_value = mean(data_value)) 
+subset_brfss_smart2010
 ```
 
+```{r}
+subset_brfss_smart2010 |> ggplot(aes(x=year, y=average_data_value, color=state)) + geom_line()
+```
 
+```{r}
+brfss_smart2010 |>
+  filter(year %in% c("2006", "2010")) |>
+  mutate(year=as.character(year)) |>
+  ggplot(aes(x = year, y = data_value)) + geom_boxplot()
+```
+
+# Problem 3
+```{r}
+nhanes_covar = 
+  read_csv("./data/nhanes_covar.csv", skip=4, col_types = "ccidc") |>
+  janitor::clean_names() |>
+  mutate(
+    sex=
+      case_match(
+        sex,
+        "1"~"male",
+        "2"~"female"),
+    education=
+      case_match(
+        education,
+        "1"~"Less than high school",
+        "2"~"High school equivalent",
+        "3"~"More than high school")) |>
+  filter(age>=21) |>
+  drop_na()
+
+nhanes_accel = 
+  read_csv("./data/nhanes_accel.csv", col_types = "ccidc") |>
+  janitor::clean_names() |>
+  mutate(seqn=as.character(seqn))
+
+merged_data=left_join(nhanes_covar, nhanes_accel, by="seqn")
+```
 
 
