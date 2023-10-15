@@ -33,12 +33,12 @@ scale_fill_discrete = scale_fill_viridis_d
 ```
 
 # Problem 1
-```{r}
+```{r load data for p1}
 data("instacart")
 instacart = as_tibble(instacart)
 ```
 
-The dataset instacart has `r nrow(instacart)` rows and `r ncol(instacart)` columns. The varaibles contains information for the order, user and product. There are several order-level variables, describing the day and time of the order, and number of days since prior order. Then there are several item-specific variables, describing the product name (e.g. Yogurt, Avocado), department (e.g. dairy and eggs, produce), and aisle (e.g. yogurt, fresh fruits), and whether the item has been ordered by this user in the past. In total, there are `r instacart |> select(product_id) |> distinct() |> count()` products found in `r instacart |> select(order_id) |> distinct() |> count()` orders from `r instacart |> select(user_id) |> distinct() |> count()` distinct users.
+The dataset instacart has `r nrow(instacart)` rows and `r ncol(instacart)` columns. The variables contains information for the order, user and product. As for order related variables, day and time of the order, number of days since prior order were described. As for item related variables, product name, department, and aisle were described. In total, there are `r instacart |> select(product_id) |> distinct() |> count()` products found in `r instacart |> select(order_id) |> distinct() |> count()` orders from `r instacart |> select(user_id) |> distinct() |> count()` distinct users.
 
 ```{r}
 instacart |> 
@@ -69,6 +69,7 @@ instacart |>
   knitr::kable()
 ```
 
+The table below show the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week.
 ```{r}
 instacart |>
   filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) |>
@@ -79,6 +80,7 @@ instacart |>
     values_from = mean_hour) |>
   knitr::kable(digits = 2)
 ```
+
 # Problem 2
 ```{r problem 2 data cleaning}
 data("brfss_smart2010")
@@ -98,7 +100,7 @@ brfss_smart2010 = as_tibble(brfss_smart2010) |>
   select(-response_factor)
 ```
 
-```{r}
+```{r q1 for problem 2}
 brfss_smart2010 |>
   group_by(year, state) |>
   summarize(n_distinct=n_distinct(location)) |>
@@ -108,7 +110,7 @@ brfss_smart2010 |>
 ```
 In 2002, MA and NJ were observed at 7 or more locations (8 for both of them). In 2010, FL, NJ, TX, CA, MD, NC, PA, NE, WA, MA, NY, OH were observed at 7 or more locations (41, 19, 16, 12, 12, 12, 10, 10, 10, 9, 9, 8 respectively).
 
-```{r}
+```{r q2 for problem 2}
 subset_brfss_smart2010 = brfss_smart2010 |>
   filter(response %in% "Excellent") |>
   group_by(year, state) |>
@@ -117,10 +119,11 @@ subset_brfss_smart2010
 ```
 
 ```{r}
-subset_brfss_smart2010 |> ggplot(aes(x=year, y=average_data_value, color=state)) + geom_line()
+subset_brfss_smart2010 |> 
+  ggplot(aes(x=year, y=average_data_value, color=state)) + geom_line()
 ```
 
-```{r}
+```{r q3 for problem 2}
 brfss_smart2010 |>
   filter(year %in% c("2006", "2010")) |>
   mutate(year=as.character(year)) |>
@@ -128,7 +131,7 @@ brfss_smart2010 |>
 ```
 
 # Problem 3
-```{r}
+```{r load, tidy, merge data}
 nhanes_covar = 
   read_csv("./data/nhanes_covar.csv", skip=4, col_types = "ccidc") |>
   janitor::clean_names() |>
@@ -155,19 +158,22 @@ nhanes_accel =
 merged_data=left_join(nhanes_covar, nhanes_accel, by="seqn")
 ```
 
-```{r}
+```{r }
 merged_data |>
-  group_by(education) |>
+  group_by(education) |>  
   count(sex)
 ```
+We observed that the sample size of men and women with education level "Less than high school" and "More than high school" are similar, while as for "High school equivalent", the number of women are slightly lower than number of men.
+
 ```{r}
 merged_data |>
   ggplot(aes(x = sex, y = age)) + 
   geom_boxplot() + 
   facet_grid(~education)
 ```
+The age distribution of men and women with education level of "High school equivalent" and "Less than high school" are similar, while the age of "More than high school" for both male and female are obviously lower.
 
-```{r}
+```{r add the variable total activity}
 total_activity = merged_data |>
   select(starts_with("min")) |>
   rowSums()
@@ -176,13 +182,14 @@ merged_data = cbind(merged_data,total_activity)
 ```
 
 ```{r}
-
 merged_data |>
   ggplot(aes(x=age, y=total_activity)) + 
   geom_point() + 
   facet_grid(sex~education) + 
   geom_smooth(se = FALSE)
 ```
+The plot illustrates that male and female with same education level have similar trend of total activity against age. Both men and women whose education level is "Less than high school" has obviously higher total activity than the other two education level, while there is a sudden decrease when they are about 60 years old. The total activity for people with education level "More than high school" are more stable from 21 years old to 80 years old. 
+
 ```{r}
 merged_data |>
   pivot_longer(min1:min1440,
@@ -191,7 +198,10 @@ merged_data |>
   ggplot(aes(x=minute, y=activity)) + 
   geom_point(aes(color = sex), alpha = .5) + 
   facet_grid(~education) + 
+  scale_x_continuous(
+    breaks = c(-15, 0, 15), 
+    labels = c("-15º C", "0", "15")) +
   geom_smooth(se = FALSE)
 
 ```
-
+Among all education levels, we observed similar distribution of activity among the day. People have less activity in the morning. As for education level of "High school equivalent" and "Less than high school", activity of female are more extreme, either too low or too high than male. As for education level of "More than high school", there is an obvious number of men choose to take huge activity in the very early of the morning, while there is obvious number of women choose to take huge activity in the afternoon.
