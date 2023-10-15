@@ -8,10 +8,101 @@ output: github_document
 ```{r setup, include = FALSE}
 Sys.setenv(LANG = "en_US")
 library(tidyverse)
+library(ggridges)
+library(patchwork)
+
+library(p8105.datasets)
+
+knitr::opts_chunk$set(
+	echo = TRUE,
+	warning = FALSE,
+	fig.width = 8, 
+  fig.height = 6,
+  out.width = "90%"
+)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+```
+
+# Problem 1
+```{r}
+data("instacart")
+instacart = as_tibble(instacart)
+```
+
+The dataset instacart has `r nrow(instacart)` rows and `r ncol(instacart)` columns. The varaibles contains information for the order, user and product. There are several order-level variables, describing the day and time of the order, and number of days since prior order. Then there are several item-specific variables, describing the product name (e.g. Yogurt, Avocado), department (e.g. dairy and eggs, produce), and aisle (e.g. yogurt, fresh fruits), and whether the item has been ordered by this user in the past. In total, there are `r instacart |> select(product_id) |> distinct() |> count()` products found in `r instacart |> select(order_id) |> distinct() |> count()` orders from `r instacart |> select(user_id) |> distinct() |> count()` distinct users.
+
+```{r}
+instacart |> 
+  count(aisle) |> 
+  arrange(desc(n))
+```
+There are 134 aisles and fresh vegetables holds the most items ordered.
+
+```{r}
+instacart |> 
+  count(aisle) |> 
+  filter(n>10000) |>
+  mutate(aisle = fct_reorder(aisle, n)) |>
+  ggplot(aes(x=aisle,y=n))+geom_point() + 
+  labs(title = "Number of items ordered in each aisle") +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+
+The tablebelow shows the three most popular items in aisles `baking ingredients`, `dog food care`, and `packaged vegetables fruits`, and includes the number of times each item is ordered in your table.
+```{r}
+instacart |> 
+  filter(aisle %in% c("baking ingredients", "dog food care", "packaged vegetables fruits")) |>
+  group_by(aisle) |> 
+  count(product_name) |> 
+  mutate(rank = min_rank(desc(n))) |> 
+  filter(rank < 4) |> 
+  arrange(desc(n)) |>
+  knitr::kable()
 ```
 
 ```{r}
-library(p8105.datasets)
-data("instacart")
+instacart |>
+  filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) |>
+  group_by(product_name, order_dow) |>
+  summarize(mean_hour = mean(order_hour_of_day)) |>
+  pivot_wider(
+    names_from = order_dow, 
+    values_from = mean_hour) |>
+  knitr::kable(digits = 2)
 ```
+# Problem 2
+```{r}
+data("brfss_smart2010")
+brfss_smart2010 = as_tibble(brfss_smart2010) |>
+  janitor::clean_names() |>
+  rename(location_abbr=locationabbr, location_desc=locationdesc) |>
+  filter(topic %in% "Overall Health") |>
+  mutate(response_factor = 
+           case_match(
+             response,
+             "Excellent"~"5",
+             "Very good"~"4",
+             "Good"~"3",
+             "Fair"~"2",
+             "Poor"~"1")) |>
+  arrange(desc(year), location_abbr, location_desc, response_factor) |>
+  select(-response_factor)
+```
+
+```{r}
+brfss_smart2010 |>
+  group_by(response)
+```
+
+
+
 
